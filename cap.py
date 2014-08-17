@@ -143,8 +143,7 @@ def processImage(data, img):
         result = img.crop((px[2 * i], py[2 * i], px[2 * i + 1], py[2 * i + 1])).resize((imgWidth, imgHeight))
         result = result.convert('L')
         result = result.point(table, '1')
-        result.save('s.png')
-        char = compareImg(Image.open('s.png').load())
+        char = compareImg(Image.fromstring('1', (imgWidth, imgHeight), result.tostring()).load())
         if char == '':
             print("error return")
         ret = ret + char
