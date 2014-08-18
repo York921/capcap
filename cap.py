@@ -62,26 +62,27 @@ def processImage(data, img):
     # img.save('dl.png')
     pixdata = img.load()
 
+    white = (255, 255, 255)
     for y in xrange(img.size[1]):
         for x in xrange(img.size[0]):
             if (pixdata[x, y][0] + pixdata[x, y][1] + pixdata[x, y][2] == 0) or (x + 1 < img.size[0] and pixdata[x, y] == pixdata[x + 1, y]) or (x > 0 and pixdata[x, y] == pixdata[x - 1, y]):
                 pass
             else:
-                pixdata[x, y] = (255,255,255)
+                pixdata[x, y] = white
 
     findBlack = True
     px = []
     for x in xrange(img.size[0]):
         if findBlack:
             for y in xrange(img.size[1]):
-                if pixdata[x, y] != (255, 255, 255):
+                if pixdata[x, y] != white:
                     findBlack = not findBlack
                     px.append(x)
                     break
         else:
             allWhite = True
             for y in xrange(img.size[1]):
-                if pixdata[x, y] != (255, 255, 255):
+                if pixdata[x, y] != white:
                     allWhite = False
                     break
             if allWhite:
@@ -97,15 +98,15 @@ def processImage(data, img):
         findBlack = True
         for j in xrange(img.size[1]):
             if findBlack:
-                for k in xrange(px[i * 2],px[i * 2 + 1]):
-                    if pixdata[k, j] != (255, 255, 255):
+                for k in xrange(px[i * 2], px[i * 2 + 1]):
+                    if pixdata[k, j] != white:
                         py.append(j)
                         findBlack = not findBlack
                         break
             else:
                 allWhite = True
-                for k in xrange(px[i * 2],px[i * 2 + 1]):
-                    if pixdata[k, j] != (255, 255, 255):
+                for k in xrange(px[i * 2], px[i * 2 + 1]):
+                    if pixdata[k, j] != white:
                         allWhite = False
                         break
                 if allWhite:
@@ -283,3 +284,4 @@ if __name__ == '__main__':
     for x in xrange(threadCount):
         thread = register(str(x))
         thread.start()
+    log.close()
