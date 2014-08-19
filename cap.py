@@ -7,14 +7,16 @@ import gzip, string, random, os, time, sys
 import threading
 from StringIO import StringIO
 
+baseDir = os.path.dirname(__file__) 
+forumId = 'tdfh'
 count = 0
 imgWidth = 15
 imgHeight = 26
 imageDic = dict()
-path = './sample/'
+path = os.path.join(baseDir, 'sample')
 table = [i / 254 for i in range(256)]
 lock = threading.RLock()
-log = open("log.txt", 'w')
+log = open(os.path.join(baseDir, "log.txt"), 'w')
 
 commonHeader =  {'Host':'www.7do.net',
 'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36',
@@ -27,7 +29,7 @@ def initSamples():
     for parent,dirnames,filenames in os.walk(path): 
         for filename in filenames:
             if filename[:1] != '.':
-                img = Image.open(path + filename)
+                img = Image.open(os.path.join(path, filename))
                 imageDic[filename[:-4]] = img.load()
 
 def compareImg(imgData):
@@ -90,7 +92,9 @@ def processImage(data, img):
                 px.append(x)
     if len(px) == 7:
         px.append(img.size[0] - 1)
-
+    elif len(px) < 8:
+        print("Oops !We have a situation here.")
+        return
     # log.write(str(px) + '\n')
 
     py = []
@@ -131,11 +135,11 @@ def processImage(data, img):
 class register(threading.Thread):
     def __init__(self, name):
         threading.Thread.__init__(self, name = name)
-        self.cj = cookielib.LWPCookieJar(name)
+        self.cj = cookielib.LWPCookieJar(os.path.join(baseDir, name))
         self.header = commonHeader.copy()
 
     def initWeb(self):
-        self.cj.revert('cookieTemplate.txt')
+        self.cj.revert(os.path.join(baseDir, 'cookieTemplate.txt'))
         self.cj.save(ignore_discard = True, ignore_expires = True)
         self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
         self.header['X-Forwarded-For'] = '{0}.{1}.{2}.{3}'.format(random.randrange(255), random.randrange(255), random.randrange(255), random.randrange(255))
@@ -159,9 +163,9 @@ class register(threading.Thread):
         return gzip.GzipFile(fileobj = StringIO(rawdata)).read()
 
     def doRequests(self):
-        self.req('http://www.7do.net/?fromuser=Tdfh')
+        self.req('http://www.7do.net/?fromuser=' + forumId)
         
-        self.header["Referer"] = 'http://www.7do.net/?fromuser=Tdfh'
+        self.header["Referer"] = 'http://www.7do.net/?fromuser=' + forumId
         self.req('http://www.7do.net/home.php?mod=misc&ac=sendmail&rand=' + str(int(time.time())))
         self.req('http://www.7do.net/member.php?mod=logging&action=login&infloat=yes&handlekey=login&inajax=1&ajaxtarget=fwin_content_login')
         webContent = self.req('http://www.7do.net/member.php?mod=register')
@@ -186,6 +190,9 @@ class register(threading.Thread):
             captcha = self.req(url, False)
 
             cap = processImage(captcha, None)
+            if not cap:
+                continue;
+
             log.write(cap + '\n')
 
             self.header['X-Requested-With'] = 'XMLHttpRequest'
@@ -199,7 +206,7 @@ class register(threading.Thread):
 
             if answer.find('invalid') <= 0:
                 lock.acquire()
-                log.write('valid')
+                log.write('valid\n')
                 lock.release()
                 break
 
@@ -217,19 +224,15 @@ Content-Disposition: form-data; name="formhash"\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
 Content-Disposition: form-data; name="referer"\r
 \r
-http://www.7do.net/?fromuser=Tdfh\r
+http://www.7do.net/?fromuser={0}\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
 Content-Disposition: form-data; name="activationauth"\r
 \r
 \r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
-Content-Disposition: form-data; name="{0}"\r
+Content-Disposition: form-data; name="{1}"\r
 \r
-{1}\r
-------WebKitFormBoundary3untao1xYPCyrRO1\r
-Content-Disposition: form-data; name="{2}"\r
-\r
-111111\r
+{2}\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
 Content-Disposition: form-data; name="{3}"\r
 \r
@@ -237,20 +240,24 @@ Content-Disposition: form-data; name="{3}"\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
 Content-Disposition: form-data; name="{4}"\r
 \r
-{5}\r
+111111\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
-Content-Disposition: form-data; name="sechash"\r
+Content-Disposition: form-data; name="{5}"\r
 \r
 {6}\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
-Content-Disposition: form-data; name="seccodeverify"\r
+Content-Disposition: form-data; name="sechash"\r
 \r
 {7}\r
+------WebKitFormBoundary3untao1xYPCyrRO1\r
+Content-Disposition: form-data; name="seccodeverify"\r
+\r
+{8}\r
 ------WebKitFormBoundary3untao1xYPCyrRO1\r
 Content-Disposition: form-data; name="regsubmit"\r
 \r
 true\r
-------WebKitFormBoundary3untao1xYPCyrRO1--'''.format(name, username, password, passwordConfirm, email, userEmail, hashid, cap)
+------WebKitFormBoundary3untao1xYPCyrRO1--'''.format(forumId, name, username, password, passwordConfirm, email, userEmail, hashid, cap)
         # print(data)
 
         self.header['Content-Type'] = 'multipart/form-data; boundary=----WebKitFormBoundary3untao1xYPCyrRO1'
@@ -280,8 +287,12 @@ if __name__ == '__main__':
     count = int(sys.argv[1])
     initSamples()
 
-    threadCount = min(count, 10)
+    threadCount = min(count, 50)
+    threads = list()
     for x in xrange(threadCount):
         thread = register(str(x))
         thread.start()
+        threads.append(thread)
+    for t in threads:
+        t.join()
     log.close()
